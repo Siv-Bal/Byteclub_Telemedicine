@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import nlp, quantum, fountain, vitals
+from routers import nlp, quantum, fountain, vitals, transcribe
 
 app = FastAPI(title="MedLink Backend API")
 
@@ -17,6 +17,7 @@ app.include_router(nlp.router, prefix="/api")
 app.include_router(quantum.router, prefix="/api")
 app.include_router(fountain.router, prefix="/api")
 app.include_router(vitals.router, prefix="/api")
+app.include_router(transcribe.router, prefix="/api")
 
 @app.get("/")
 def read_root():

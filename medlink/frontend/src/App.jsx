@@ -2,9 +2,11 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import { LayoutDashboard, Activity, Stethoscope, Image as ImageIcon, Network, Users, Search, Bell, Moon, LogOut, Star } from 'lucide-react';
 
+import { TriageProvider } from './TriageStore';
 import Dashboard from './pages/Dashboard';
 import PatientVitals from './pages/PatientVitals';
 import ClinicalNLP from './pages/ClinicalNLP';
+import PatientTriage from './pages/PatientTriage';
 import ImageTransfer from './pages/ImageTransfer';
 import QuantumRouting from './pages/QuantumRouting';
 import DoctorDashboard from './pages/DoctorDashboard';
@@ -75,53 +77,57 @@ function TopBar() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-sans">
-        {/* Sidebar */}
-        <div className="w-[240px] bg-white border-r border-slate-100 flex flex-col">
-          <div className="p-6 pb-8">
-            <div className="flex items-center gap-3">
-              <div className="bg-brand-500 text-white p-1.5 rounded-lg">
-                <Activity size={24} className="stroke-[2.5]" />
+    <TriageProvider>
+      <BrowserRouter>
+        <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-sans">
+          {/* Sidebar */}
+          <div className="w-[240px] bg-white border-r border-slate-100 flex flex-col">
+            <div className="p-6 pb-8">
+              <div className="flex items-center gap-3">
+                <div className="bg-brand-500 text-white p-1.5 rounded-lg">
+                  <Activity size={24} className="stroke-[2.5]" />
+                </div>
+                <span className="text-xl font-extrabold tracking-tight text-brand-600">MedLink</span>
               </div>
-              <span className="text-xl font-extrabold tracking-tight text-brand-600">MedLink</span>
+            </div>
+            
+            <div className="flex-1 px-4 space-y-1 overflow-y-auto">
+              <SidebarItem to="/" icon={LayoutDashboard} label="Dashboard" />
+              <SidebarItem to="/vitals" icon={Activity} label="Patient Vitals" />
+              <SidebarItem to="/nlp" icon={Stethoscope} label="Clinical Intelligence" />
+              <SidebarItem to="/triage" icon={Users} label="Patient Triage" />
+              <SidebarItem to="/image" icon={ImageIcon} label="Image Transfer" />
+              <SidebarItem to="/quantum" icon={Network} label="Quantum Routing" />
+              <SidebarItem to="/doctor" icon={Users} label="Doctor Dashboard" />
+            </div>
+
+            <div className="p-4 space-y-2 mt-auto">
+              <button className="flex items-center gap-3 px-4 py-2.5 w-full rounded-2xl border border-slate-200 text-slate-600 font-semibold text-[13px] hover:bg-slate-50 transition-colors">
+                <Moon size={16} /> Dark Mode
+              </button>
+              <button className="flex items-center gap-3 px-4 py-2.5 w-full rounded-2xl border border-rose-100 text-rose-500 font-semibold text-[13px] hover:bg-rose-50 transition-colors">
+                <LogOut size={16} /> Log Out
+              </button>
             </div>
           </div>
-          
-          <div className="flex-1 px-4 space-y-1 overflow-y-auto">
-            <SidebarItem to="/" icon={LayoutDashboard} label="Dashboard" />
-            <SidebarItem to="/vitals" icon={Activity} label="Patient Vitals" />
-            <SidebarItem to="/nlp" icon={Stethoscope} label="Clinical Intelligence" />
-            <SidebarItem to="/image" icon={ImageIcon} label="Image Transfer" />
-            <SidebarItem to="/quantum" icon={Network} label="Quantum Routing" />
-            <SidebarItem to="/doctor" icon={Users} label="Doctor Dashboard" />
-          </div>
 
-          <div className="p-4 space-y-2 mt-auto">
-            <button className="flex items-center gap-3 px-4 py-2.5 w-full rounded-2xl border border-slate-200 text-slate-600 font-semibold text-[13px] hover:bg-slate-50 transition-colors">
-              <Moon size={16} /> Dark Mode
-            </button>
-            <button className="flex items-center gap-3 px-4 py-2.5 w-full rounded-2xl border border-rose-100 text-rose-500 font-semibold text-[13px] hover:bg-rose-50 transition-colors">
-              <LogOut size={16} /> Log Out
-            </button>
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <TopBar />
+            <main className="flex-1 overflow-y-auto p-8 bg-[#F8F9FA]">
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/vitals" element={<PatientVitals />} />
+                <Route path="/nlp" element={<ClinicalNLP />} />
+                <Route path="/triage" element={<PatientTriage />} />
+                <Route path="/image" element={<ImageTransfer />} />
+                <Route path="/quantum" element={<QuantumRouting />} />
+                <Route path="/doctor" element={<DoctorDashboard />} />
+              </Routes>
+            </main>
           </div>
         </div>
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <TopBar />
-          <main className="flex-1 overflow-y-auto p-8 bg-[#F8F9FA]">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/vitals" element={<PatientVitals />} />
-              <Route path="/nlp" element={<ClinicalNLP />} />
-              <Route path="/image" element={<ImageTransfer />} />
-              <Route path="/quantum" element={<QuantumRouting />} />
-              <Route path="/doctor" element={<DoctorDashboard />} />
-            </Routes>
-          </main>
-        </div>
-      </div>
-    </BrowserRouter>
+      </BrowserRouter>
+    </TriageProvider>
   );
 }
