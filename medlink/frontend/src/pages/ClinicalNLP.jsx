@@ -10,19 +10,19 @@ const MOCK_VITALS = { spo2: 82, hr: 140 };
 // ─────────────────────────────────────────────────────────────
 const CHIP_TOKENS = {
   heavy_breathing: { token: 'R08', label: 'Respiratory Distress', weight: 4 },
-  immobile:        { token: 'M01', label: 'Immobility',           weight: 2 },
-  bleeding:        { token: 'S20', label: 'Severe Bleeding',       weight: 5 },
-  unconscious:     { token: 'C05', label: 'Unconscious',           weight: 5 },
-  crush:           { token: 'T15', label: 'Crush Injury',          weight: 3 },
-  trapped:         { token: 'T20', label: 'Trapped / Debris',      weight: 4 },
-  burn:            { token: 'T25', label: 'Burn Injury',           weight: 3 },
-  cardiac:         { token: 'S12', label: 'Cardiac Event',         weight: 4 },
+  immobile: { token: 'M01', label: 'Immobility', weight: 2 },
+  bleeding: { token: 'S20', label: 'Severe Bleeding', weight: 5 },
+  unconscious: { token: 'C05', label: 'Unconscious', weight: 5 },
+  crush: { token: 'T15', label: 'Crush Injury', weight: 3 },
+  trapped: { token: 'T20', label: 'Trapped / Debris', weight: 4 },
+  burn: { token: 'T25', label: 'Burn Injury', weight: 3 },
+  cardiac: { token: 'S12', label: 'Cardiac Event', weight: 4 },
 };
 
 const PANEL_TOKENS = {
-  consciousness_uncons: { token: 'C05', label: 'Unconscious',    weight: 5 },
-  bleed_severe:         { token: 'S20', label: 'Severe Bleeding', weight: 5 },
-  mobil_immobile:       { token: 'M01', label: 'Immobility',      weight: 2 },
+  consciousness_uncons: { token: 'C05', label: 'Unconscious', weight: 5 },
+  bleed_severe: { token: 'S20', label: 'Severe Bleeding', weight: 5 },
+  mobil_immobile: { token: 'M01', label: 'Immobility', weight: 2 },
 };
 
 const TOKEN_DESCRIPTIONS = {
@@ -110,14 +110,14 @@ function normalizeText(text) {
 //  SYMPTOM CHIPS
 // ─────────────────────────────────────────────────────────────
 const SYMPTOMS = [
-  { id: 'heavy_breathing', label: 'Heavy Breathing / Labored',   detect: t => /\b(breath|breathing|respiratory|wheez|breathless|labored|trouble breath|gasping|shortness of breath|can't breathe)\b/i.test(t) },
-  { id: 'immobile',        label: 'Not Walking / Immobile',       detect: t => /\b(immobile|not walking|cannot walk|can't walk|lying|fallen|on ground|unconscious|collapsed|not moving|motionless)\b/i.test(t) },
-  { id: 'bleeding',        label: 'Severe Uncontrolled Bleeding', detect: t => /bleed|blood|hemorrhag|haemorrhag/i.test(t) },
-  { id: 'unconscious',     label: 'Unconscious / Unresponsive',   detect: t => /\b(unconscious|unresponsive|not responding|passed out|fainted|blacked out|no response|collapsed|not awake|loss of consciousness)\b/i.test(t) },
-  { id: 'crush',           label: 'Crush Injury',                 detect: t => /\b(crush|crushed|crush injury|pinned)\b/i.test(t) },
-  { id: 'trapped',         label: 'Trapped Under Debris',         detect: t => /\b(trapped|under debris|under rubble|pinned|stuck under|caught under)\b/i.test(t) },
-  { id: 'burn',            label: 'Burn Injury',                  detect: t => /\b(burn|burned|burnt|fire|scald|scalded|flame)\b/i.test(t) },
-  { id: 'cardiac',         label: 'Cardiac Event',                detect: t => /\b(chest pain|heart|cardiac|heart attack|myocardial|angina|chest tightness)\b/i.test(t) },
+  { id: 'heavy_breathing', label: 'Heavy Breathing / Labored', detect: t => /\b(breath|breathing|respiratory|wheez|breathless|labored|trouble breath|gasping|shortness of breath|can't breathe)\b/i.test(t) },
+  { id: 'immobile', label: 'Not Walking / Immobile', detect: t => /\b(immobile|not walking|cannot walk|can't walk|lying|fallen|on ground|unconscious|collapsed|not moving|motionless)\b/i.test(t) },
+  { id: 'bleeding', label: 'Severe Uncontrolled Bleeding', detect: t => /bleed|blood|hemorrhag|haemorrhag/i.test(t) },
+  { id: 'unconscious', label: 'Unconscious / Unresponsive', detect: t => /\b(unconscious|unresponsive|not responding|passed out|fainted|blacked out|no response|collapsed|not awake|loss of consciousness)\b/i.test(t) },
+  { id: 'crush', label: 'Crush Injury', detect: t => /\b(crush|crushed|crush injury|pinned)\b/i.test(t) },
+  { id: 'trapped', label: 'Trapped Under Debris', detect: t => /\b(trapped|under debris|under rubble|pinned|stuck under|caught under)\b/i.test(t) },
+  { id: 'burn', label: 'Burn Injury', detect: t => /\b(burn|burned|burnt|fire|scald|scalded|flame)\b/i.test(t) },
+  { id: 'cardiac', label: 'Cardiac Event', detect: t => /\b(chest pain|heart|cardiac|heart attack|myocardial|angina|chest tightness)\b/i.test(t) },
 ];
 
 // Age extractor
@@ -146,15 +146,15 @@ function computeLiveCTP(activeChipIds, consciousness, bleed, mobil, patientId = 
 
   // From panel
   if (consciousness === 'UNCONS') tokenMap.set('C05', { label: 'Unconscious', weight: 5 });
-  if (bleed === 'Severe')        tokenMap.set('S20', { label: 'Severe Bleeding', weight: 5 });
-  if (mobil === 'Immobile')      tokenMap.set('M01', { label: 'Immobility', weight: 2 });
+  if (bleed === 'Severe') tokenMap.set('S20', { label: 'Severe Bleeding', weight: 5 });
+  if (mobil === 'Immobile') tokenMap.set('M01', { label: 'Immobility', weight: 2 });
 
   // Vitals
-  if (MOCK_VITALS.spo2 < 85)    tokenMap.set('V04', { label: 'Critical SpO₂', weight: 5 });
-  if (MOCK_VITALS.hr > 130)     tokenMap.set('V05', { label: 'Critical Heart Rate', weight: 4 });
+  if (MOCK_VITALS.spo2 < 85) tokenMap.set('V04', { label: 'Critical SpO₂', weight: 5 });
+  if (MOCK_VITALS.hr > 130) tokenMap.set('V05', { label: 'Critical Heart Rate', weight: 4 });
 
   const tokens = [...tokenMap.keys()];
-  const score  = [...tokenMap.values()].reduce((s, v) => s + v.weight, 0);
+  const score = [...tokenMap.values()].reduce((s, v) => s + v.weight, 0);
   const triage = score >= 12 ? 'RED' : score >= 6 ? 'YELLOW' : 'GREEN';
   const encoded = [patientId, ...tokens].join('|');
 
@@ -234,7 +234,7 @@ export default function ClinicalNLP() {
         gl.addFromString('#JSGF V1.0; grammar medical; public <medical> = ' + MEDICAL_VOCAB.join(' | ') + ';', 1);
         rec.grammars = gl;
       }
-    } catch (_) {}
+    } catch (_) { }
 
     rec.onresult = (event) => {
       let interim = '', finalChunk = '';
@@ -262,8 +262,8 @@ export default function ClinicalNLP() {
     rec.onerror = (e) => {
       if (e.error === 'not-allowed') setMicError('Microphone permission denied. Please allow mic access and reload.');
       else if (e.error === 'no-speech') {
-        try { rec.stop(); } catch (_) {}
-        if (recognitionRef.current === rec) setTimeout(() => { try { rec.start(); } catch (_) {} }, 300);
+        try { rec.stop(); } catch (_) { }
+        if (recognitionRef.current === rec) setTimeout(() => { try { rec.start(); } catch (_) { } }, 300);
         return;
       } else setMicError(`Speech recognition error: ${e.error}`);
       setIsRecording(false); setInterimText('');
@@ -379,7 +379,7 @@ export default function ClinicalNLP() {
 
       {sttMode !== 'checking' && (
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest w-fit border ${sttMode === 'whisper' ? 'bg-brand-50 text-brand-600 border-brand-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
-          {sttMode === 'whisper' ? <Wifi size={12}/> : <WifiOff size={12}/>}
+          {sttMode === 'whisper' ? <Wifi size={12} /> : <WifiOff size={12} />}
           {sttMode === 'whisper' ? 'Whisper STT Active' : 'Browser Mic Active (offline mode)'}
         </div>
       )}
@@ -398,9 +398,8 @@ export default function ClinicalNLP() {
               <button
                 key={symp.id}
                 onClick={() => toggleChip(symp.id)}
-                className={`px-4 py-3 rounded-xl border text-sm font-bold transition-all duration-200 flex items-center justify-center text-center gap-2 cursor-pointer ${
-                  active ? 'bg-blue-50 border-blue-400 text-blue-700 shadow-sm shadow-blue-500/20 scale-[1.02]' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
-                }`}
+                className={`px-4 py-3 rounded-xl border text-sm font-bold transition-all duration-200 flex items-center justify-center text-center gap-2 cursor-pointer ${active ? 'bg-blue-50 border-blue-400 text-blue-700 shadow-sm shadow-blue-500/20 scale-[1.02]' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
+                  }`}
               >
                 {active && <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse shrink-0" />}
                 <span>{symp.label}</span>
@@ -438,7 +437,7 @@ export default function ClinicalNLP() {
             <div className="absolute bottom-4 right-4 flex gap-3">
               <button onClick={() => { setObservation(SAMPLE_CASE); setRawTranscript(SAMPLE_CASE); setInterimText(''); }} className="px-4 py-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">Load Sample</button>
               <button onClick={toggleRecording} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm ${isRecording ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'}`}>
-                {isRecording ? <><MicOff size={16}/> Stop Recording</> : <><Mic size={16}/> Dictate</>}
+                {isRecording ? <><MicOff size={16} /> Stop Recording</> : <><Mic size={16} /> Dictate</>}
               </button>
             </div>
           </div>
@@ -450,16 +449,16 @@ export default function ClinicalNLP() {
           {/* AGE — Blue */}
           <div className={`bg-white rounded-[24px] p-5 shadow-sm border-2 transition-all duration-500 ${autoFilled.age ? 'border-emerald-400 shadow-emerald-100 shadow-md' : 'border-blue-100'}`}>
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-400"/><div className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">Age</div></div>
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-400" /><div className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">Age</div></div>
               {autoFilled.age && <span className="text-[9px] font-bold text-emerald-500 animate-pulse">Auto-filled ✓</span>}
             </div>
-            <input type="text" placeholder="e.g. 35, 30-40" value={age} onChange={e => setAge(e.target.value)} className="w-full bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm font-mono text-slate-700 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-300 placeholder:text-blue-200"/>
+            <input type="text" placeholder="e.g. 35, 30-40" value={age} onChange={e => setAge(e.target.value)} className="w-full bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm font-mono text-slate-700 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-300 placeholder:text-blue-200" />
           </div>
 
           {/* CONSCIOUSNESS — Violet */}
           <div className={`bg-white rounded-[24px] p-5 shadow-sm border-2 transition-all duration-500 ${autoFilled.consciousness ? 'border-emerald-400 shadow-emerald-100 shadow-md' : 'border-violet-100'}`}>
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-violet-400"/><div className="text-[9px] font-bold text-violet-400 uppercase tracking-widest">Consciousness</div></div>
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-violet-400" /><div className="text-[9px] font-bold text-violet-400 uppercase tracking-widest">Consciousness</div></div>
               {autoFilled.consciousness && <span className="text-[9px] font-bold text-emerald-500 animate-pulse">Auto-filled ✓</span>}
             </div>
             <div className="flex bg-violet-50 rounded-lg p-1 border border-violet-100">
@@ -472,7 +471,7 @@ export default function ClinicalNLP() {
           <div className="flex gap-3">
             <div className={`flex-1 bg-white rounded-[24px] p-4 shadow-sm border-2 transition-all duration-500 ${autoFilled.bleed ? 'border-emerald-400 shadow-emerald-100 shadow-md' : 'border-rose-100'}`}>
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-400"/><div className="text-[9px] font-bold text-rose-400 uppercase tracking-widest">Bleed</div></div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-400" /><div className="text-[9px] font-bold text-rose-400 uppercase tracking-widest">Bleed</div></div>
                 {autoFilled.bleed && <span className="text-[9px] font-bold text-emerald-500 animate-pulse">✓</span>}
               </div>
               <select value={bleed} onChange={e => setBleed(e.target.value)} className={`w-full border rounded-lg px-2 py-2.5 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-rose-300 transition-colors ${bleed === 'Severe' ? 'bg-rose-600 text-white border-rose-500' : bleed === 'Minor' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-rose-50 text-rose-300 border-rose-100'}`}>
@@ -481,7 +480,7 @@ export default function ClinicalNLP() {
             </div>
             <div className={`flex-1 bg-white rounded-[24px] p-4 shadow-sm border-2 transition-all duration-500 ${autoFilled.mobil ? 'border-emerald-400 shadow-emerald-100 shadow-md' : 'border-amber-100'}`}>
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400"/><div className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">Mobil</div></div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /><div className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">Mobil</div></div>
                 {autoFilled.mobil && <span className="text-[9px] font-bold text-emerald-500 animate-pulse">✓</span>}
               </div>
               <select value={mobil} onChange={e => setMobil(e.target.value)} className={`w-full border rounded-lg px-2 py-2.5 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-300 transition-colors ${mobil === 'Immobile' ? 'bg-amber-500 text-white border-amber-400' : mobil === 'Walking' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-300 border-amber-100'}`}>
@@ -498,8 +497,8 @@ export default function ClinicalNLP() {
       <div className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">
         <div className="flex items-center justify-between mb-5">
           <h2 className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            <Zap size={14} className="text-brand-500"/> CTP Decoder
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-1"/>
+            <Zap size={14} className="text-brand-500" /> CTP Decoder
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-1" />
           </h2>
           <span className="text-[10px] font-mono font-bold text-slate-400">{ctp.tokens.length} token{ctp.tokens.length !== 1 ? 's' : ''} active</span>
         </div>
@@ -534,10 +533,10 @@ export default function ClinicalNLP() {
               {ctp.tokens.length === 0
                 ? <div className="text-[11px] text-slate-300 italic">No active findings</div>
                 : ctp.tokens.map(tok => (
-                    <div key={tok} className="text-[11px] text-slate-600 font-medium flex items-center gap-1.5">
-                      <span className="text-brand-400">•</span> {TOKEN_DESCRIPTIONS[tok] || tok}
-                    </div>
-                  ))
+                  <div key={tok} className="text-[11px] text-slate-600 font-medium flex items-center gap-1.5">
+                    <span className="text-brand-400">•</span> {TOKEN_DESCRIPTIONS[tok] || tok}
+                  </div>
+                ))
               }
             </div>
           </div>
@@ -587,7 +586,7 @@ export default function ClinicalNLP() {
         disabled={!observation.trim() || observation.startsWith('⏳') || isAnalyzing}
         className={`w-full flex items-center justify-center gap-3 py-5 rounded-[24px] text-lg font-black uppercase tracking-widest transition-all shadow-lg ${isAnalyzing ? 'bg-brand-400 text-brand-100 cursor-not-allowed' : 'bg-brand-600 text-white hover:bg-brand-700 hover:shadow-brand-500/30 hover:shadow-xl hover:-translate-y-0.5'}`}
       >
-        {isAnalyzing ? <><Sparkles className="animate-spin"/> Processing...</> : <><Database/> Execute Clinical Analysis &amp; Triage</>}
+        {isAnalyzing ? <><Sparkles className="animate-spin" /> Processing...</> : <><Database /> Execute Clinical Analysis &amp; Triage</>}
       </button>
 
       {/* POST-EXECUTE RESULT */}
