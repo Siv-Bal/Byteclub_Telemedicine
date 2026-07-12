@@ -2,6 +2,8 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { PieChart, Pie, Cell } from 'recharts';
 import { Network, Activity, AlertTriangle, Play, Settings } from 'lucide-react';
+import { useTriageStore } from '../TriageStore';
+import { useSerialStore } from '../SerialStore';
 
 const vitalsData = [
   { time: '00:00', hr: 72, spo2: 98 },
@@ -25,6 +27,16 @@ const meshData = [
 ];
 
 export default function Dashboard() {
+  const { patients: triagePatients } = useTriageStore();
+  const vitals = useSerialStore(s => s.vitals);
+
+  const activePatients = triagePatients.length;
+  const fieldNodes = Object.keys(vitals).length;
+  const criticalCount = triagePatients.filter(p => p.triage === 'RED').length;
+  const warningCount = triagePatients.filter(p => p.triage === 'YELLOW').length;
+  const stableCount = triagePatients.filter(p => p.triage === 'GREEN').length;
+  const latestPatient = triagePatients.length > 0 ? triagePatients[triagePatients.length - 1] : null;
+
   return (
     <div className="max-w-[1200px] mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
       
@@ -44,15 +56,15 @@ export default function Dashboard() {
           <div className="flex gap-16 relative z-10 mt-auto">
             <div>
               <div className="text-[10px] uppercase font-bold text-brand-100 tracking-wider mb-2">Active<br/>Patients</div>
-              <div className="text-4xl font-bold">142</div>
+              <div className="text-4xl font-bold">{activePatients}</div>
             </div>
             <div>
               <div className="text-[10px] uppercase font-bold text-brand-100 tracking-wider mb-2 mt-[14px]">Field Nodes</div>
-              <div className="text-4xl font-bold">28</div>
+              <div className="text-4xl font-bold">{fieldNodes}</div>
             </div>
             <div>
               <div className="text-[10px] uppercase font-bold text-brand-100 tracking-wider mb-2 mt-[14px]">Avg Loss Rate</div>
-              <div className="text-4xl font-bold">0.02%</div>
+              <div className="text-4xl font-bold">0.00%</div>
             </div>
           </div>
 
@@ -76,10 +88,10 @@ export default function Dashboard() {
                 <div className="w-1.5 h-6 bg-red-500 rounded-full"></div>
                 <div>
                   <div className="font-bold text-sm text-red-700">Critical</div>
-                  <div className="text-[10px] text-red-500 font-medium">8 Active Emergency</div>
+                  <div className="text-[10px] text-red-500 font-medium">{criticalCount} Active Emergency</div>
                 </div>
               </div>
-              <div className="text-2xl font-black text-red-700">08</div>
+              <div className="text-2xl font-black text-red-700">{criticalCount.toString().padStart(2, '0')}</div>
             </div>
 
             <div className="flex items-center justify-between p-4 bg-amber-50/50 rounded-2xl border border-amber-100">
@@ -87,10 +99,10 @@ export default function Dashboard() {
                 <div className="w-1.5 h-6 bg-amber-400 rounded-full"></div>
                 <div>
                   <div className="font-bold text-sm text-amber-700">Warning</div>
-                  <div className="text-[10px] text-amber-600 font-medium">24 Observation Status</div>
+                  <div className="text-[10px] text-amber-600 font-medium">{warningCount} Observation Status</div>
                 </div>
               </div>
-              <div className="text-2xl font-black text-amber-600">24</div>
+              <div className="text-2xl font-black text-amber-600">{warningCount.toString().padStart(2, '0')}</div>
             </div>
 
             <div className="flex items-center justify-between p-4 bg-green-50/50 rounded-2xl border border-green-100">
@@ -98,10 +110,10 @@ export default function Dashboard() {
                 <div className="w-1.5 h-6 bg-green-500 rounded-full"></div>
                 <div>
                   <div className="font-bold text-sm text-green-700">Stable</div>
-                  <div className="text-[10px] text-green-600 font-medium">110 Normal Monitoring</div>
+                  <div className="text-[10px] text-green-600 font-medium">{stableCount} Normal Monitoring</div>
                 </div>
               </div>
-              <div className="text-2xl font-black text-green-600">110</div>
+              <div className="text-2xl font-black text-green-600">{stableCount.toString().padStart(2, '0')}</div>
             </div>
           </div>
         </div>
@@ -161,7 +173,7 @@ export default function Dashboard() {
               <div className="absolute -left-[51px] top-0 w-[34px] h-[34px] bg-white border-[3px] border-blue-400 text-blue-500 rounded-full flex items-center justify-center text-[9px] font-bold z-10">OBS</div>
               <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">Patient Observation</div>
               <div className="bg-slate-50 p-4 rounded-xl text-[12px] italic text-slate-600 border border-slate-100 shadow-inner">
-                "Patient unconscious with severe chest pain and labored breathing."
+                "{latestPatient ? latestPatient.rawTranscript : 'Waiting for observation...'}"
               </div>
             </div>
 
@@ -169,21 +181,21 @@ export default function Dashboard() {
             <div className="relative">
               <div className="absolute -left-[51px] top-0 w-[34px] h-[34px] bg-white border-[3px] border-blue-400 text-blue-500 rounded-full flex items-center justify-center text-[9px] font-bold z-10">TOKEN</div>
               <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">C.T.P. Conversion</div>
-              <div className="flex gap-2">
-                <span className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-mono font-bold rounded">P104</span>
-                <span className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-mono font-bold rounded">C05</span>
-                <span className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-mono font-bold rounded">S12</span>
+              <div className="flex flex-wrap gap-2">
+                {latestPatient ? latestPatient.tokens.map((t, i) => (
+                  <span key={i} className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-mono font-bold rounded">{t}</span>
+                )) : <span className="text-[10px] text-slate-400">N/A</span>}
               </div>
             </div>
 
             {/* Step 3 */}
             <div className="relative">
-              <div className="absolute -left-[51px] top-0 w-[34px] h-[34px] bg-white border-[3px] border-red-500 text-red-500 rounded-full flex items-center justify-center text-[11px] font-black z-10 shadow-sm shadow-red-500/20">18</div>
+              <div className="absolute -left-[51px] top-0 w-[34px] h-[34px] bg-white border-[3px] border-red-500 text-red-500 rounded-full flex items-center justify-center text-[11px] font-black z-10 shadow-sm shadow-red-500/20">{latestPatient ? latestPatient.priorityScore : '--'}</div>
               <div className="text-[10px] uppercase font-bold text-slate-400 mb-2 tracking-wider">Severity Score</div>
               <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden mb-2">
-                <div className="h-full bg-red-500 w-[90%]"></div>
+                <div className="h-full bg-red-500 transition-all" style={{ width: `${Math.min(100, ((latestPatient?.priorityScore || 0) / 20) * 100)}%` }}></div>
               </div>
-              <div className="text-[9px] font-bold text-red-500 uppercase tracking-widest">Critical Risk Threshold Exceeded</div>
+              <div className="text-[9px] font-bold text-red-500 uppercase tracking-widest">{latestPatient?.triage === 'RED' ? 'Critical Risk Threshold Exceeded' : latestPatient?.triage === 'YELLOW' ? 'Warning Level Reached' : latestPatient ? 'Stable' : 'Waiting...'}</div>
             </div>
             
             {/* Connecting line overrides */}
@@ -311,49 +323,38 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 text-xs font-semibold text-slate-700">
-                
-                <tr className="hover:bg-slate-50 transition-colors">
-                  <td className="py-4 pl-2 text-slate-900 font-bold">#PT-8291</td>
-                  <td className="py-4"><span className="bg-red-50 text-red-500 px-2 py-1 rounded font-bold">22</span></td>
-                  <td className="py-4 flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500"></div><span className="text-red-500 text-[10px] font-bold uppercase tracking-wider">Critical</span></td>
-                  <td className="py-4 text-[10px] font-mono text-slate-500">P104 | C05 | S12 | V04</td>
-                  <td className="py-4">Tachycardia / Hypoxia</td>
-                  <td className="py-4 text-right pr-2">
-                    <div className="flex justify-end gap-2">
-                      <button className="bg-red-500 text-white text-[9px] font-bold uppercase px-3 py-1.5 rounded-lg shadow-sm hover:bg-red-600 transition-colors">Dispatch</button>
-                      <button className="bg-brand-500 text-white text-[9px] font-bold uppercase px-3 py-1.5 rounded-lg shadow-sm hover:bg-brand-600 transition-colors">View Stream</button>
-                    </div>
-                  </td>
-                </tr>
-
-                <tr className="hover:bg-slate-50 transition-colors">
-                  <td className="py-4 pl-2 text-slate-900 font-bold">#PT-9042</td>
-                  <td className="py-4"><span className="bg-amber-50 text-amber-600 px-2 py-1 rounded font-bold">14</span></td>
-                  <td className="py-4 flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-400"></div><span className="text-amber-500 text-[10px] font-bold uppercase tracking-wider">Warning</span></td>
-                  <td className="py-4 text-[10px] font-mono text-slate-500">P022 | C14 | S01 | V02</td>
-                  <td className="py-4">Abdominal Pain (Post-Op)</td>
-                  <td className="py-4 text-right pr-2">
-                    <div className="flex justify-end gap-2">
-                      <button className="bg-white border border-slate-200 text-slate-600 text-[9px] font-bold uppercase px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">Assign Dr.</button>
-                      <button className="bg-brand-500 text-white text-[9px] font-bold uppercase px-3 py-1.5 rounded-lg shadow-sm hover:bg-brand-600 transition-colors">Request Image</button>
-                    </div>
-                  </td>
-                </tr>
-
-                <tr className="hover:bg-slate-50 transition-colors">
-                  <td className="py-4 pl-2 text-slate-900 font-bold">#PT-7718</td>
-                  <td className="py-4"><span className="bg-green-50 text-green-600 px-2 py-1 rounded font-bold">04</span></td>
-                  <td className="py-4 flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div><span className="text-green-500 text-[10px] font-bold uppercase tracking-wider">Stable</span></td>
-                  <td className="py-4 text-[10px] font-mono text-slate-500">P001 | C02 | S00 | V01</td>
-                  <td className="py-4">Routine Recovery Monitor</td>
-                  <td className="py-4 text-right pr-2">
-                    <div className="flex justify-end gap-2">
-                      <button className="bg-white border border-slate-200 text-slate-600 text-[9px] font-bold uppercase px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">Acknowledge</button>
-                      <button className="bg-white border border-green-200 text-green-600 text-[9px] font-bold uppercase px-3 py-1.5 rounded-lg hover:bg-green-50 transition-colors">Resolve</button>
-                    </div>
-                  </td>
-                </tr>
-
+                {triagePatients.length > 0 ? [...triagePatients].reverse().slice(0, 5).map(patient => (
+                  <tr key={patient.patientId} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-4 pl-2 text-slate-900 font-bold">#{patient.patientId}</td>
+                    <td className="py-4">
+                      <span className={`px-2 py-1 rounded font-bold ${patient.triage === 'RED' ? 'bg-red-50 text-red-500' : patient.triage === 'YELLOW' ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}>
+                        {patient.priorityScore}
+                      </span>
+                    </td>
+                    <td className="py-4 flex items-center gap-2">
+                      <div className={`w-1.5 h-1.5 rounded-full ${patient.triage === 'RED' ? 'bg-red-500' : patient.triage === 'YELLOW' ? 'bg-amber-400' : 'bg-green-500'}`}></div>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${patient.triage === 'RED' ? 'text-red-500' : patient.triage === 'YELLOW' ? 'text-amber-500' : 'text-green-500'}`}>
+                        {patient.triage === 'RED' ? 'Critical' : patient.triage === 'YELLOW' ? 'Warning' : 'Stable'}
+                      </span>
+                    </td>
+                    <td className="py-4 text-[10px] font-mono text-slate-500">{patient.tokens.join(' | ') || 'N/A'}</td>
+                    <td className="py-4">{patient.entities.join(', ') || 'Routine Monitor'}</td>
+                    <td className="py-4 text-right pr-2">
+                      <div className="flex justify-end gap-2">
+                        {patient.triage === 'RED' ? (
+                          <button className="bg-red-500 text-white text-[9px] font-bold uppercase px-3 py-1.5 rounded-lg shadow-sm hover:bg-red-600 transition-colors">Dispatch</button>
+                        ) : (
+                          <button className="bg-white border border-slate-200 text-slate-600 text-[9px] font-bold uppercase px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">Acknowledge</button>
+                        )}
+                        <button className="bg-brand-500 text-white text-[9px] font-bold uppercase px-3 py-1.5 rounded-lg shadow-sm hover:bg-brand-600 transition-colors">View Details</button>
+                      </div>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="6" className="py-8 text-center text-slate-400 font-normal">No patients in the queue.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

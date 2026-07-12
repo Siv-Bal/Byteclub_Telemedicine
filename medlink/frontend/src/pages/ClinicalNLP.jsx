@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useTriageStore } from '../TriageStore';
-import { Mic, MicOff, Activity, Cpu, Sparkles, Database, FileText, Wifi, WifiOff, Zap } from 'lucide-react';
+import { useSerialStore } from '../SerialStore';
+import { Mic, MicOff, Activity, Cpu, Sparkles, Database, FileText, Wifi, WifiOff, Zap, Radio } from 'lucide-react';
 
 const SAMPLE_CASE = "Patient unconscious with severe chest pain and bleeding. Patient immobile and trapped. Age 45.";
-const MOCK_VITALS = { spo2: 82, hr: 140 };
 
 // ─────────────────────────────────────────────────────────────
 //  CTP TOKEN MAP  (symptom chip id → token)
@@ -135,7 +135,8 @@ function extractAgeFromText(text) {
 //  Input: active chip IDs + panel values
 //  Output: tokens[], score, triage, encoded
 // ─────────────────────────────────────────────────────────────
-function computeLiveCTP(activeChipIds, consciousness, bleed, mobil, patientId = 'P104') {
+// vitals: { spo2, hr } — can be real sensor data or fallback
+function computeLiveCTP(activeChipIds, consciousness, bleed, mobil, patientId = 'P104', vitals = { spo2: 100, hr: 70 }) {
   const tokenMap = new Map(); // token → {label, weight}
 
   // From chips
@@ -149,9 +150,9 @@ function computeLiveCTP(activeChipIds, consciousness, bleed, mobil, patientId = 
   if (bleed === 'Severe') tokenMap.set('S20', { label: 'Severe Bleeding', weight: 5 });
   if (mobil === 'Immobile') tokenMap.set('M01', { label: 'Immobility', weight: 2 });
 
-  // Vitals
-  if (MOCK_VITALS.spo2 < 85) tokenMap.set('V04', { label: 'Critical SpO₂', weight: 5 });
-  if (MOCK_VITALS.hr > 130) tokenMap.set('V05', { label: 'Critical Heart Rate', weight: 4 });
+  // Real sensor vitals → CTP tokens
+  if (vitals.spo2 > 0 && vitals.spo2 < 85) tokenMap.set('V04', { label: 'Critical SpO₂', weight: 5 });
+  if (vitals.hr > 130) tokenMap.set('V05', { label: 'Critical Heart Rate', weight: 4 });
 
   const tokens = [...tokenMap.keys()];
   const score = [...tokenMap.values()].reduce((s, v) => s + v.weight, 0);
@@ -185,6 +186,14 @@ export default function ClinicalNLP() {
   const [manualChips, setManualChips] = useState(new Set());
 
   const { addPatient } = useTriageStore();
+
+  // ── Real sensor vitals from SerialStore ────────────────────────────
+  const serialVitals = useSerialStore(s => s.vitals);
+  const serialConnected = useSerialStore(s => s.isConnected);
+  const firstNode = Object.values(serialVitals)[0] || null;
+  const liveVitals = firstNode
+    ? { spo2: firstNode.spo2, hr: firstNode.bpm, nodeName: firstNode.name }
+    : { spo2: 100, hr: 70 };
   const recognitionRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -200,8 +209,11 @@ export default function ClinicalNLP() {
   // Combined active chips
   const activeChipIds = useMemo(() => new Set([...autoDetected, ...manualChips]), [autoDetected, manualChips]);
 
-  // Live CTP computation — updates on EVERY state change
-  const ctp = useMemo(() => computeLiveCTP([...activeChipIds], consciousness, bleed, mobil), [activeChipIds, consciousness, bleed, mobil]);
+  // Live CTP computation — updates on EVERY state change (including real sensor vitals)
+  const ctp = useMemo(
+    () => computeLiveCTP([...activeChipIds], consciousness, bleed, mobil, 'P104', liveVitals),
+    [activeChipIds, consciousness, bleed, mobil, liveVitals.spo2, liveVitals.hr]
+  );
 
   const toggleChip = (id) => {
     setManualChips(prev => {
@@ -311,7 +323,8 @@ export default function ClinicalNLP() {
     setResult(null);
 
     const normalized = normalizeText(observation);
-    const patientId = `PT-${Math.floor(1000 + Math.random() * 8999)}`;
+    // Use the real node name as patient ID if connected, otherwise fallback
+    const patientId = (serialConnected && liveVitals.nodeName) ? liveVitals.nodeName : `PT-${Math.floor(1000 + Math.random() * 8999)}`;
     const fullText = observation + ' ' + normalized;
     const filled = {};
 
@@ -336,7 +349,7 @@ export default function ClinicalNLP() {
     setTimeout(() => setAutoFilled({}), 2000);
 
     // Use live CTP for the final output
-    const liveCtp = computeLiveCTP([...activeChipIds], newConsciousness, newBleed, newMobil, patientId);
+    const liveCtp = computeLiveCTP([...activeChipIds], newConsciousness, newBleed, newMobil, patientId, liveVitals);
 
     const structuredOutput = {
       patientId,
@@ -351,7 +364,7 @@ export default function ClinicalNLP() {
       priorityScore: liveCtp.score,
       triage: liveCtp.triage,
       encodedRecord: liveCtp.encoded,
-      vitals: MOCK_VITALS,
+      vitals: { hr: liveVitals.hr, spo2: liveVitals.spo2 },
     };
     localStorage.setItem('medlink_clinical_output', JSON.stringify(structuredOutput));
     addPatient(structuredOutput);
@@ -377,12 +390,21 @@ export default function ClinicalNLP() {
         </div>
       </div>
 
-      {sttMode !== 'checking' && (
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest w-fit border ${sttMode === 'whisper' ? 'bg-brand-50 text-brand-600 border-brand-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
-          {sttMode === 'whisper' ? <Wifi size={12} /> : <WifiOff size={12} />}
-          {sttMode === 'whisper' ? 'Whisper STT Active' : 'Browser Mic Active (offline mode)'}
-        </div>
-      )}
+      <div className="flex flex-wrap items-center gap-3">
+        {sttMode !== 'checking' && (
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${sttMode === 'whisper' ? 'bg-brand-50 text-brand-600 border-brand-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+            {sttMode === 'whisper' ? <Wifi size={12}/> : <WifiOff size={12}/>}
+            {sttMode === 'whisper' ? 'Whisper STT Active' : 'Browser Mic Active (offline mode)'}
+          </div>
+        )}
+        {serialConnected && firstNode && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border bg-emerald-50 text-emerald-700 border-emerald-200">
+            <Radio size={12}/>
+            {liveVitals.nodeName} · SpO₂ {liveVitals.spo2?.toFixed(1)}% · HR {liveVitals.hr?.toFixed(0)} BPM
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          </div>
+        )}
+      </div>
 
       {/* SYMPTOM FEATURE EXTRACTION — clickable + auto-detect */}
       <div className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">

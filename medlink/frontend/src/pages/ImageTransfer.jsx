@@ -1,128 +1,149 @@
-import React, { useState } from 'react';
-import { Image as ImageIcon, Send, ShieldCheck, Activity } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Image as ImageIcon, Link, Unlink, Radio, RefreshCw, Download } from 'lucide-react';
+import { useSerialStore } from '../SerialStore';
+import { NODE_NAMES } from '../SerialStore';
 
 export default function ImageTransfer() {
-  const [loss, setLoss] = useState(30);
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const { isConnected, images, imageBuffers, events, connect, disconnect } = useSerialStore();
 
-  const handleTest = async () => {
-    setLoading(true);
-    setResult(null);
-    try {
-      const res = await fetch('http://localhost:8000/api/fountain-demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ loss_percentage: loss })
-      });
-      const data = await res.json();
-      setResult(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+  // Derive progress per node
+  const progress = {};
+  Object.entries(imageBuffers).forEach(([nid, buf]) => {
+    progress[nid] = buf.totalChunks > 0 ? Math.round((buf.received.size / buf.totalChunks) * 100) : 0;
+  });
+
+  // Download helper
+  const download = (url, nodeId) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `medlink_${NODE_NAMES[nodeId] || nodeId}_${Date.now()}.jpg`;
+    a.click();
   };
-
-  const drawImage = (pixels, canvasId) => {
-    if (!pixels) return;
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const imgData = ctx.createImageData(64, 64);
-    for (let i = 0; i < 64; i++) {
-      for (let j = 0; j < 64; j++) {
-        const val = pixels[i][j];
-        const idx = (i * 64 + j) * 4;
-        imgData.data[idx] = val;
-        imgData.data[idx+1] = val;
-        imgData.data[idx+2] = val;
-        imgData.data[idx+3] = 255;
-      }
-    }
-    ctx.putImageData(imgData, 0, 0);
-  };
-
-  React.useEffect(() => {
-    if (result) {
-      drawImage(result.original, 'canvas-orig');
-      drawImage(result.reconstructed, 'canvas-recon');
-    }
-  }, [result]);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
+    <div className="max-w-[1200px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Image Transfer (Fountain Coding)</h1>
-          <p className="text-slate-500">Progressive wavelet transmission over high-loss links</p>
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Image Transfer</h1>
+          <p className="text-sm font-medium text-slate-500 mt-1">Live JPEG reconstruction from ESP-NOW chunk stream via serial bridge</p>
+        </div>
+        <button
+          onClick={isConnected ? disconnect : connect}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-all shadow-sm w-fit ${isConnected ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100' : 'bg-brand-600 text-white hover:bg-brand-700 shadow-brand-500/25'}`}
+        >
+          {isConnected ? <><Unlink size={16} /> Disconnect</> : <><Link size={16} /> Connect Serial</>}
+        </button>
+      </div>
+
+      {/* Protocol Explainer */}
+      <div className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">
+        <h2 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><ImageIcon size={16} className="text-brand-500" /> How Image Chunks Arrive</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[
+            { step: '1', title: 'Phone Capture', desc: 'Patient phone uploads JPEG to Yokes node AP (/upload endpoint)', color: 'bg-brand-50 border-brand-100 text-brand-700' },
+            { step: '2', title: 'ESP-NOW Burst', desc: `Image split into 230-byte chunks, sent to gateway MAC over ESP-NOW channel 1`, color: 'bg-violet-50 border-violet-100 text-violet-700' },
+            { step: '3', title: 'Serial Line', desc: `Gateway prints IMAGE_CHUNK,Y,<idx>,<total>,<len>,<hex> at 115200 baud`, color: 'bg-amber-50 border-amber-100 text-amber-700' },
+            { step: '4', title: 'Reconstruction', desc: 'Browser assembles hex chunks into Uint8Array → Blob → Object URL', color: 'bg-emerald-50 border-emerald-100 text-emerald-700' },
+          ].map(s => (
+            <div key={s.step} className={`rounded-2xl border p-4 ${s.color}`}>
+              <div className="text-2xl font-black mb-2 opacity-20">{s.step}</div>
+              <div className="text-xs font-bold uppercase tracking-widest mb-1">{s.title}</div>
+              <div className="text-xs font-medium opacity-70 leading-relaxed">{s.desc}</div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex flex-col md:flex-row gap-8 items-center">
-        <div className="flex-1 w-full space-y-6">
-          <div>
-            <label className="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-2">
-              <Activity size={16} /> Simulated Packet Loss
-            </label>
-            <div className="flex items-center gap-4">
-              <input 
-                type="range" 
-                min="0" max="80" 
-                value={loss} 
-                onChange={e => setLoss(parseInt(e.target.value))}
-                className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-500"
-              />
-              <span className="font-mono font-bold text-lg text-slate-700 w-12 text-right">{loss}%</span>
-            </div>
+      {/* Empty / Not connected */}
+      {!isConnected && Object.keys(images).length === 0 && (
+        <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-16 flex flex-col items-center text-center">
+          <div className="w-20 h-20 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center mb-5">
+            <Radio size={36} className="text-brand-400" />
           </div>
-          
-          <button 
-            onClick={handleTest}
-            disabled={loading}
-            className="w-full py-4 bg-brand-500 text-white rounded-2xl hover:bg-brand-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 font-bold shadow-md shadow-brand-500/20"
-          >
-            {loading ? <Activity size={20} className="animate-spin" /> : <Send size={20} />}
-            Run Fountain Encoding Demo
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Waiting for Image Stream</h2>
+          <p className="text-slate-500 text-sm max-w-sm mb-8 leading-relaxed">
+            Connect the ESP32 Gateway serial port, then take a photo from any patient node's web page
+            (<strong>http://192.168.4.1/</strong> on the node's WiFi). 
+            Chunks will appear below automatically.
+          </p>
+          <button onClick={connect}
+            className="flex items-center gap-2 px-8 py-3 bg-brand-600 text-white rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-brand-700 transition-colors shadow-md shadow-brand-500/25">
+            <Link size={18} /> Connect Serial Port
           </button>
         </div>
-      </div>
+      )}
 
-      {result && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in zoom-in-95 duration-300">
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 text-center">
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-6">Original Image</h2>
-            <div className="flex justify-center mb-6">
-              <div className="p-2 border-2 border-slate-100 rounded-2xl shadow-inner bg-slate-50">
-                <canvas id="canvas-orig" width="64" height="64" className="w-48 h-48 pixelated rounded-xl"></canvas>
-              </div>
-            </div>
+      {/* In-progress chunks */}
+      {Object.entries(imageBuffers).some(([, b]) => b.received.size > 0 && b.received.size < b.totalChunks) && (
+        <div className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2"><RefreshCw size={12} className="animate-spin" /> Receiving Chunks…</h2>
           </div>
-          
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 text-center relative overflow-hidden">
-            <h2 className="text-sm font-bold text-brand-600 uppercase tracking-wider mb-6 flex items-center justify-center gap-2">
-              <ShieldCheck size={16} /> Reconstructed
-            </h2>
-            <div className="flex justify-center mb-6">
-              <div className="p-2 border-2 border-brand-100 rounded-2xl shadow-inner bg-brand-50">
-                <canvas id="canvas-recon" width="64" height="64" className="w-48 h-48 pixelated rounded-xl"></canvas>
+          {Object.entries(imageBuffers).map(([nid, buf]) => {
+            const pct = buf.totalChunks > 0 ? Math.round((buf.received.size / buf.totalChunks) * 100) : 0;
+            if (buf.received.size === 0) return null;
+            return (
+              <div key={nid} className="space-y-3">
+                <div className="flex justify-between items-center text-xs font-bold text-slate-600">
+                  <span>{NODE_NAMES[nid] || nid}</span>
+                  <div className="flex items-center gap-4">
+                    <span className="font-mono">{buf.received.size} / {buf.totalChunks} chunks · {pct}%</span>
+                    <button 
+                      onClick={() => useSerialStore.getState().forceAssembleImage(nid)}
+                      className="px-3 py-1 bg-brand-50 text-brand-600 rounded-md hover:bg-brand-100 transition-colors uppercase tracking-wider text-[9px]"
+                    >
+                      Force Show Partial
+                    </button>
+                  </div>
+                </div>
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-brand-500 rounded-full transition-all duration-300 animate-pulse" style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Assembled images */}
+      {Object.entries(images).length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {Object.entries(images).map(([nid, url]) => (
+            <div key={nid} className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="text-sm font-bold text-slate-800">{NODE_NAMES[nid] || nid}</div>
+                  <div className="text-[10px] font-medium text-slate-400">Latest image · ESP-NOW chunk stream</div>
+                </div>
+                <button onClick={() => download(url, nid)}
+                  className="flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 bg-brand-50 text-brand-600 border border-brand-100 rounded-lg hover:bg-brand-100 transition-colors uppercase tracking-wider">
+                  <Download size={12} /> Save
+                </button>
+              </div>
+              <div className="rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 flex items-center justify-center">
+                <img src={url} alt={`${NODE_NAMES[nid] || nid} capture`} className="max-w-full max-h-[400px] object-contain" />
+              </div>
+              <div className="mt-3 text-[10px] text-slate-400 font-medium text-center">
+                Reconstructed from {imageBuffers[nid]?.totalChunks ?? '?'} × 230-byte ESP-NOW chunks
               </div>
             </div>
-            
-            <div className="grid grid-cols-3 gap-2 mt-4 text-left">
-              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-                <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Sent</div>
-                <div className="text-lg font-bold text-slate-800 font-mono">{result.stats.packets_sent}</div>
+          ))}
+        </div>
+      )}
+
+      {/* Recent image events */}
+      {events.filter(e => e.msg?.includes('📷')).length > 0 && (
+        <div className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100">
+          <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Image Transfer Log</h2>
+          <div className="space-y-2">
+            {events.filter(e => e.msg?.includes('📷')).map((ev, i) => (
+              <div key={i} className="flex items-center gap-3 text-xs">
+                <span className="text-slate-300 font-mono shrink-0">{ev.time}</span>
+                <span className="text-slate-600 font-medium">{ev.msg}</span>
               </div>
-              <div className="bg-rose-50 rounded-xl p-3 border border-rose-100">
-                <div className="text-[10px] uppercase font-bold text-rose-400 mb-1">Lost</div>
-                <div className="text-lg font-bold text-rose-700 font-mono">{result.stats.packets_lost}</div>
-              </div>
-              <div className="bg-green-50 rounded-xl p-3 border border-green-100">
-                <div className="text-[10px] uppercase font-bold text-green-500 mb-1">Recovered</div>
-                <div className="text-lg font-bold text-green-700 font-mono">{result.stats.chunks_recovered}</div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       )}

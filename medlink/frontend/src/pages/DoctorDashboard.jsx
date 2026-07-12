@@ -1,70 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Truck, CheckCircle2, Image as ImageIcon, History, Archive, RefreshCw, UserPlus, Heart, Wind, ShieldAlert, AlertTriangle, Activity } from 'lucide-react';
-
-const INITIAL_QUEUE = [
-  {
-    id: 'PT-8291',
-    score: 18,
-    triage: 'RED',
-    vitals: { hr: 140, spo2: 82 },
-    tokens: ['Unconscious', 'Severe Chest Pain'],
-    ctp: 'V04 | V05 | C05 | S12',
-    status: 'pending',
-    doctor: null,
-    imageResolved: false,
-    history: [{ action: 'Initial CTP received from field gateway', time: new Date(Date.now() - 1000 * 60 * 2).toLocaleTimeString() }]
-  },
-  {
-    id: 'PT-9042',
-    score: 9,
-    triage: 'YELLOW',
-    vitals: { hr: 110, spo2: 94 },
-    tokens: ['High Fever', 'Confusion'],
-    ctp: 'S40 | C11',
-    status: 'pending',
-    doctor: null,
-    imageResolved: true, // Already resolved for demo
-    history: [{ action: 'Initial CTP received from field gateway', time: new Date(Date.now() - 1000 * 60 * 12).toLocaleTimeString() }]
-  }
-];
+import { useTriageStore } from '../TriageStore';
+import { useSerialStore } from '../SerialStore';
 
 export default function DoctorDashboard() {
-  const [queue, setQueue] = useState(INITIAL_QUEUE);
+  const { patients: triagePatients, removePatient: removeTriagePatient } = useTriageStore();
+  const images = useSerialStore(s => s.images);
+
+  // Local state to track assignment, actions, and history per patient ID
+  const [localStatuses, setLocalStatuses] = useState({});
   const [historyOpenFor, setHistoryOpenFor] = useState(null);
 
+  // Derive the active queue from the global triage patients
+  const queue = triagePatients.map(p => {
+    // If patientId is 'Yokes', its node char is 'Y'
+    const nodeId = p.patientId === 'Yokes' ? 'Y' : p.patientId.charAt(0);
+    const imageUrl = images[nodeId];
+    const local = localStatuses[p.patientId] || { status: 'pending', doctor: null, history: [{ action: 'Initial CTP received from field gateway', time: p.timestamp }] };
+
+    return {
+      id: p.patientId,
+      score: p.priorityScore,
+      triage: p.triage,
+      vitals: p.vitals,
+      tokens: p.tokens,
+      ctp: p.encodedRecord ? p.encodedRecord.split('|').slice(1, -1).join(' | ') : p.tokens.join(' | '),
+      status: local.status,
+      doctor: local.doctor,
+      history: local.history,
+      imageResolved: !!imageUrl,
+      imageUrl: imageUrl
+    };
+  });
+
   const updateStatus = (id, newStatus, actionDesc, updates = {}) => {
-    setQueue(prev => prev.map(p => {
-      if (p.id === id) {
-        return {
-          ...p,
+    setLocalStatuses(prev => {
+      const existing = prev[id] || { status: 'pending', doctor: null, history: [{ action: 'Initial CTP received from field gateway', time: new Date().toLocaleTimeString() }] };
+      return {
+        ...prev,
+        [id]: {
+          ...existing,
           status: newStatus,
           ...updates,
-          history: [{ action: actionDesc, time: new Date().toLocaleTimeString() }, ...p.history]
-        };
-      }
-      return p;
-    }));
+          history: [{ action: actionDesc, time: new Date().toLocaleTimeString() }, ...existing.history]
+        }
+      };
+    });
   };
 
   const removePatient = (id) => {
-    setQueue(prev => prev.filter(p => p.id !== id));
+    removeTriagePatient(id);
+    setLocalStatuses(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   };
 
   const requestImage = (id) => {
-    updateStatus(id, 'resolving_image', 'Requested High-Res Image (Fountain Priority Elevated)');
-    // Simulate image resolving over 3 seconds
-    setTimeout(() => {
-      setQueue(prev => prev.map(p => {
-        if (p.id === id) {
-           return {
-             ...p,
-             imageResolved: true,
-             history: [{ action: 'High-Res Image Decoded via Fountain Link', time: new Date().toLocaleTimeString() }, ...p.history]
-           }
-        }
-        return p;
-      }));
-    }, 3000);
+    updateStatus(id, 'resolving_image', 'Waiting for high-res ESP-NOW chunks from node');
   };
 
   const ActionButton = ({ icon: Icon, label, onClick, variant = 'default', disabled = false, loading = false }) => {
@@ -186,7 +180,7 @@ export default function DoctorDashboard() {
                     </div>
                   ) : (
                     <img 
-                      src="https://images.unsplash.com/photo-1559706164-c4b92b676f4e?q=80&w=300&auto=format&fit=crop" 
+                      src={patient.imageUrl || "https://images.unsplash.com/photo-1559706164-c4b92b676f4e?q=80&w=300&auto=format&fit=crop"} 
                       className="w-full h-full object-cover animate-in fade-in zoom-in duration-700 mix-blend-luminosity"
                       alt="Medical Scan"
                     />

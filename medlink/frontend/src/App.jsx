@@ -63,11 +63,8 @@ function TopBar() {
         {/* Profile */}
         <div className="flex items-center gap-3 border-l border-slate-100 pl-6">
           <div className="text-right">
-            <div className="text-sm font-bold text-slate-900 leading-tight">Dr. Sarah Grayson</div>
-            <div className="text-[10px] font-bold text-slate-400">Chief Intelligence Officer</div>
-          </div>
-          <div className="w-9 h-9 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm">
-             <img src="https://i.pravatar.cc/150?u=sarah" alt="Dr. Sarah Grayson" className="w-full h-full object-cover" />
+            <div className="text-sm font-bold text-slate-900 leading-tight">Admin</div>
+            <div className="text-[10px] font-bold text-slate-400">System Administrator</div>
           </div>
         </div>
       </div>
